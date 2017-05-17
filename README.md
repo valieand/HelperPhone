@@ -42,7 +42,7 @@ echo ($phoneNumber->isValidNumber() ? 'Yes':'No');
 echo ($phoneNumber->isValidNumberForRegion($regionCode) ? 'Yes':'No');
 // Yes
 
-echo PhoneNumberConst::typeNames[$phoneNumber->getNumberType()];
+echo $phoneNumber->getNumberTypeTitle();
 // Mobile
 
 echo $phoneNumber->getCountryCode();
