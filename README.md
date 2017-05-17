@@ -6,7 +6,7 @@ Copyright (c) 2013-2016 Andrey Valiev aka @valieand
 
 This pack includes following modules for ProcessWire CMS/CMF:
 - FieldtypePhoneNumber: module that stores phone numbers
-- InputFieldPhoneNumber: module that renders inputfield for phone numbers
+- InputfieldPhoneNumber: module that renders inputfield for phone numbers
 - HelperPhone: module that can be
 
 All these modules require included PW WireData-derived class PhoneNumber and PhoneNumberConst.
@@ -31,15 +31,29 @@ starts happening.
 
 ```````````
 $phone = '8 (916) 318-07-29 ext 1234'; // input string could be in any phone-recognizable format
-$phoneNumber = new PhoneNumber($phone, 'RU'); // or call wire('modules')->get('HelperPhone')->makePhoneNumber($phone, 'RU');
+$phoneNumber = new PhoneNumber($phone, 'RU');
+// or wire('modules')->get('HelperPhone')->makePhoneNumber($phone, 'RU');
 
-echo ($phoneNumber->isValidNumber() ? 'Yes':'No'); // Yes
-echo ($phoneNumber->isValidNumberForRegion($regionCode) ? 'Yes':'No'); // Yes
-echo PhoneNumberConst::typeNames[$phoneNumber->getNumberType()]; // Mobile
-echo $phoneNumber->getCountryCode(); // 7
-echo $phoneNumber->getRegionCode(); // RU
-echo $phoneNumber->getNationalNumber(); // 9163180729
-echo $phoneNumber->getExtension(); // 1234
+echo ($phoneNumber->isValidNumber() ? 'Yes':'No');
+// Yes
+
+echo ($phoneNumber->isValidNumberForRegion($regionCode) ? 'Yes':'No');
+// Yes
+
+echo PhoneNumberConst::typeNames[$phoneNumber->getNumberType()];
+// Mobile
+
+echo $phoneNumber->getCountryCode();
+// 7
+
+echo $phoneNumber->getRegionCode();
+// RU
+
+echo $phoneNumber->getNationalNumber();
+// 9163180729
+
+echo $phoneNumber->getExtension();
+// 1234
 ```````````
 
 ## Usage: as field
@@ -51,11 +65,22 @@ Note: on field creation, make sure that you've configured field settings
 Phone field settings in example below: default region code 'RU', phone extensions are enabled
 
 ```````````
-echo $page->phone; // +79163180729, $page->phone stores instance of PhoneNumber which renders toString in E164 format. Note: this format does not include extension.
-echo $page->getFormatted('phone'); // +7 916 318-07-29 ext. 1234
-echo $page->getUnformatted('phone'); // +79163180729
-echo $page->phone->format(PhoneNumberConst::RFC3966); // tel:+7-916-318-07-29;ext=1234
-echo $page->phone->getNationalNumber(); // 9163180729
+echo $page->phone;
+// +79163180729
+// Note1: $page->phone stores instance of PhoneNumber and renders to string in E164 format.
+// Note2: E164 format does not include extension.
+
+echo $page->getFormatted('phone');
+// +7 916 318-07-29 ext. 1234
+
+echo $page->getUnformatted('phone');
+// +79163180729
+
+echo $page->phone->format(PhoneNumberConst::RFC3966);
+// tel:+7-916-318-07-29;ext=1234
+
+echo $page->phone->getNationalNumber();
+// 9163180729
 ```````````
 
 ## Usage: in PW selectors
@@ -68,7 +93,8 @@ E.g. in db it looks like this: '+79163180729#1234'. This makes it easy to query 
 echo $pages->find([
     'template' => 'my_temlate',
     'phone^=' => '+79163180729',
-]); // will echo page ids where phone starts with '+79163180729'
+]);
+// will echo page ids where phone starts with '+79163180729'
 ```````````
 
 ## License
