@@ -1,0 +1,152 @@
+<?php
+
+/**
+ * An Inputfield for handling phone number
+ *
+ * @property sring  $regionCode         ISO 3166-1 alpha-2 code for country. Used if phone number value is not in international format.
+ * @property sring  $enableExtension    Specify 1 to enable phone numbers with extension
+ * @property int    $confirm            Specify 1 to make it include a second input for confirmation
+ * @property string $confirmLabel       Label to accompany second input
+ * @property int    $maxlength          Max length of phone number (default=512)
+ *
+ */
+class InputfieldPhoneNumber extends InputfieldText {
+    public static function getModuleInfo() {
+        return [
+            'title'    => __('PhoneNumber Inputfield', __FILE__),
+            'summary'  => __('Phone number in valid format', __FILE__),
+            'version'  => 100,
+            'author'   => 'Andrey Valiev aka @valieand',
+            'href'     => 'https://github.com/valieand/HelperPhone',
+            'requires' => ['PHP>=7.0.0', 'ProcessWire>=2.6.20'],
+        ];
+    }
+
+    public function __construct() {
+        $this->setAttribute('name', 'tel');
+        parent::__construct();
+        $this->setAttribute('type', 'tel');
+        $this->setAttribute('maxlength', 512);
+        $this->setAttribute('minlength', 2);
+        $this->setAttribute('size', 0);
+        //$this->setAttribute('pattern', '^[0-9\-\+\#\s\(\)]*$');
+        $this->set('confirm', 0); // when 1, two inputs will appear and both must match
+        $this->set('confirmLabel', $this->_('Confirm'));
+        $this->set('value2', '');
+
+        $this->set('regionCode', null);
+        $this->set('enableExtension', true);
+    }
+
+    public function init() {
+        $this->wire('classLoader')->addNamespace('libphonenumber', dirname(__FILE__) . '/libphonenumber-for-php/src/');
+        require_once(dirname(__FILE__) . '/PhoneNumberConst.php');
+        require_once(dirname(__FILE__) . '/PhoneNumber.php');
+
+        return parent::init();
+    }
+
+    public function ___render() {
+        if(!$this->label || $this->label == $this->name) $this->label = $this->_('Phone number'); // label headline when no default specified
+        if($this->confirm && count($this->getErrors())) $this->attr('value', '');
+        $attrs = $this->getAttributes();
+        $out = "\n<input " . $this->getAttributesString($attrs) . " />";
+        if($this->confirm) {
+            foreach(array('id', 'name') as $key) {
+                if(isset($attrs[$key])) $attrs[$key] = '_' . $attrs[$key] . '_confirm';
+            }
+            $attrs['aria-label'] = $this->confirmLabel;
+            $attrs['placeholder'] = $this->confirmLabel;
+            $out .= "\n<div style='margin-top: 0.5em;'><input " . $this->getAttributesString($attrs) . " /></div>";
+        }
+        return $out;
+    }
+
+    public function ___renderValue() {
+        $value = $this->attr('value');
+
+        $out = '';
+        if((is_string($value) || is_numeric($value)) && strlen($value)) {
+            $phoneNumber = new PhoneNumber($value, $this->regionCode);
+            if(!$phoneNumber->isValidNumber()) {
+                $out = 'Invalid: ' . $value;
+            } else {
+                $extension = $this->enableExtension && $phoneNumber->hasExtension() ? '#' . $phoneNumber->getExtension() : '';
+                $out = ((string) $phoneNumber) . $extension;
+            }
+        };
+
+        return $out;
+    }
+
+    protected function setAttributeValue($value) {
+        if($value instanceof PhoneNumber) {
+            $phoneNumber = $value;
+        } elseif((is_string($value) || is_numeric($value)) && strlen($value)) {
+            $phoneNumber = new PhoneNumber($value, $this->regionCode);
+        } else {
+            $phoneNumber = new PhoneNumber(null, $this->regionCode);
+        }
+
+        if(!$phoneNumber->isEmpty()) {
+            if($phoneNumber->isValidNumber()) {
+                if(!$this->enableExtension && $phoneNumber->hasExtension()) {
+                    $this->warning($this->_('Phone number extenstions are disabled in \'' . $this->name . '\' and may be lost on save.'));
+                }
+            } else {
+                if($this->regionCode) {
+                    $this->error($this->_('The phone number ' . $phoneNumber->format(PhoneNumberConst::international) . ' is invalid for ' . $this->regionCode . ' region.'));
+                } else {
+                    $this->error($this->_('The phone number ' . $phoneNumber->format(PhoneNumberConst::international) . ' is invalid. Region is unknown.'));
+                }
+            }
+            $extension = $phoneNumber->hasExtension() ? '#' . $phoneNumber->getExtension() : '';
+            $value = $phoneNumber->format(PhoneNumberConst::E164) . $extension;
+        } else {
+            $value = '';
+        }
+
+        return $value;
+    }
+
+    public function ___processInput(WireInputData $input) {
+        parent::___processInput($input);
+
+        if($this->confirm) {
+            $value = $this->wire('sanitizer')->text($this->attr('value'));
+            $phoneNumber = new PhoneNumber($value, $this->regionCode);
+            $valueConfirm = $this->wire('sanitizer')->text($input["_{$this->name}_confirm"]);
+            $phoneNumberConfirm = new PhoneNumber($valueConfirm, $this->regionCode);
+
+            if((strlen($value) || strlen($valueConfirm)) && !$phoneNumber->equal($phoneNumberConfirm)) {
+                $this->attr('value', '');
+                $this->error($this->_('The phone numbers you entered did not match, please enter again'));
+            }
+        }
+
+        return $this;
+    }
+
+    public function ___getConfigInputfields() {
+        $inputfields = parent::___getConfigInputfields();
+
+        $skips = array('stripTags', 'pattern');
+        foreach($skips as $name) {
+            $f = $inputfields->get($name);
+            if($f) $inputfields->remove($f);
+        }
+
+        $f = $this->wire('modules')->get('InputfieldCheckbox');
+        $f->attr('name', 'confirm');
+        $f->label = $this->_('Confirm phone number?');
+        $f->description = $this->_('When checked, two inputs will appear and the user will have to enter their phone number twice to confirm it. This helps reduce the possibility of typos.');
+        $f->attr('value', 1);
+        $f->collapsed = $this->confirm ? Inputfield::collapsedNo : Inputfield::collapsedYes;
+        if($this->confirm) $f->attr('checked', 'checked');
+
+        $inputfields->add($f);
+
+        return $inputfields;
+    }
+
+}

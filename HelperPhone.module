@@ -1,0 +1,38 @@
+<?php
+/**
+ * @class HelperPhone
+ *
+ * Helper module for phone numbers handling.
+ *
+ * Thin wrapper over giggsey/libphonenumber-for-php, itself is port of Google's libphonenumber.
+ *
+ */
+class HelperPhone extends WireData implements Module {
+    public static function getModuleInfo() {
+        return [
+            'title'    => __('Helper Phone'),
+            'summary'  => __('Helper module for phone numbers handling'),
+            'version'  => 100,
+            'author'   => 'Andrey Valiev aka @valieand',
+            'href'     => 'https://github.com/valieand/HelperPhone',
+            'requires' => ['PHP>=7.0.0', 'ProcessWire>=2.6.20'],
+            'singular' => true,
+        ];
+    }
+
+    public function __construct() {
+        $this->wire('classLoader')->addNamespace('libphonenumber', dirname(__FILE__) . '/libphonenumber-for-php/src/');
+        require_once(dirname(__FILE__) . '/PhoneNumberConst.php');
+        require_once(dirname(__FILE__) . '/PhoneNumber.php');
+    }
+
+    public function init() {
+    }
+
+    public static function makePhoneNumber($phoneNumber, $regionCode = null) {
+        return new PhoneNumber($phoneNumber, $regionCode);
+    }
+
+}
+
+?>

@@ -1,0 +1,257 @@
+<?php
+
+/**
+ * ProcessWire PhoneNumber Fieldtype
+ *
+ * Fieldtype for holding phone number.
+ *
+ */
+
+class FieldtypePhoneNumber extends FieldtypeText {
+    public static function getModuleInfo() {
+        return [
+            'title'    => __('PhoneNumber Fieldtype', __FILE__),
+            'summary'  => __('Field that stores phone number', __FILE__),
+            'version'  => 100,
+            'author'   => 'Andrey Valiev aka @valieand',
+            'href'     => 'https://github.com/valieand/HelperPhone',
+            'requires' => ['PHP>=7.0.0', 'ProcessWire>=2.6.20'],
+        ];
+    }
+
+    public function init() {
+        $this->wire('classLoader')->addNamespace('libphonenumber', dirname(__FILE__) . '/libphonenumber-for-php/src/');
+        require_once(dirname(__FILE__) . '/PhoneNumberConst.php');
+        require_once(dirname(__FILE__) . '/PhoneNumber.php');
+
+        return parent::init();
+    }
+
+    public function getInputfield(Page $page, Field $field) {
+        $inputfield = $this->wire('modules')->get('InputfieldPhoneNumber');
+        $inputfield->class = $this->className();
+        $inputfield->set('regionCode', $field->regionCode);
+        $inputfield->set('enableExtension', $field->enableExtension);
+        return $inputfield;
+    }
+
+    public function getBlankValue(Page $page, Field $field) {
+        return new PhoneNumber(null, $field->regionCode);
+    }
+
+    /**
+     * Return whether the given value is considered empty or not.
+     *
+     * This can be anything that might be present in a selector value and thus is
+     * typically a string. However, it may be used outside of that purpose so you
+     * shouldn't count on it being a string.
+     *
+     * Example: an integer or text Fieldtype might not consider a "0" to be empty,
+     * whereas a Page reference would.
+     *
+     * #pw-group-finding
+     *
+     * @param Field $field
+     * @param mixed $value
+     * @return bool
+     *
+     */
+    public function isEmptyValue(Field $field, $value) {
+        return $value->phoneNumber === null;
+    }
+
+    /**
+     * Sanitize the value for runtime storage and return it.
+     *
+     * - Implementation is required by Fieldtype modules, as this method is abstract.
+     * - This method should remove anything that's invalid from the given value. If it can't be sanitized, it should be made blank.
+     * - This method filters every value set to a Page instance, so it should do it's thing as quickly as possible.
+     *
+     * #pw-group-loading
+     *
+     * @param Page $page
+     * @param Field $field
+     * @param string|int|WireArray|object $value
+     * @return PhoneNumber
+     *
+     */
+    public function sanitizeValue(Page $page, Field $field, $value) {
+        if($value instanceof PhoneNumber) {
+            return $value;
+        } elseif((is_string($value) || is_numeric($value)) && strlen($value)) {
+            $phoneNumber = new PhoneNumber($value, $field->regionCode);
+            if(!$phoneNumber->isValidNumber()) return $this->getBlankValue($page, $field);
+            return $phoneNumber;
+        } else return $this->getBlankValue($page, $field);
+    }
+
+    /**
+     * Given a raw value (value as stored in DB), return the value as it would appear in a Page object
+     *
+     * @param Page $page
+     * @param Field $field
+     * @param string|int|array $value
+     * @access public
+     * @return PhoneNumber $value
+     *
+     */
+    public function ___wakeupValue(Page $page, Field $field, $value) {
+        if($value instanceof PhoneNumber) {
+            $phoneNumber = $value;
+        } elseif((is_string($value) || is_numeric($value)) && strlen($value)) {
+            $phoneNumber = new PhoneNumber($value, $field->regionCode);
+        } else {
+            $phoneNumber = $this->getBlankValue($page, $field);
+        }
+
+        return $phoneNumber;
+    }
+
+    /**
+     * Given an 'awake' value, as set by wakeupValue, convert the value back to a basic type for storage in DB.
+     *
+     * @param Page $page
+     * @param Field $field
+     * @param string|int|array|object $value
+     * @access public
+     * @return string    String representation of phone number E164 format # extension (if enabled)
+     *
+     */
+    public function ___sleepValue(Page $page, Field $field, $value) {
+        if($value instanceof PhoneNumber) {
+            $phoneNumber = $value;
+        } elseif((is_string($value) || is_numeric($value)) && strlen($value)) {
+            $phoneNumber = new PhoneNumber($value, $field->regionCode);
+        } else {
+            $phoneNumber = $this->getBlankValue($page, $field);
+        }
+
+        if($phoneNumber->isValidNumber()) {
+            $extension = $field->enableExtension && $phoneNumber->hasExtension() ? '#' . $phoneNumber->getExtension() : '';
+            $value = $phoneNumber->format(PhoneNumberConst::E164) . $extension;
+        } else {
+            $value = '';
+        }
+
+        return $value;
+    }
+
+    public function getDatabaseSchema(Field $field) {
+        $len = $this->wire('database')->getMaxIndexLength();
+        $schema = parent::getDatabaseSchema($field);
+        $schema['data'] = "varchar($len) NOT NULL default ''";
+        return $schema;
+    }
+
+    /**
+     * Format the given value for output and return a string of the formatted value
+     *
+     * Page instances call upon this method to do any necessary formatting of a value in preparation for output,
+     * but only if output formatting `$page->of()` is enabled. The most common use of this method is for text-only fields that
+     * need to have some text formatting applied to them, like Markdown, SmartyPants, Textile, etc. As a result,
+     * Fieldtype modules don't need to implement this unless it's applicable.
+     *
+     * Fieldtype modules that implement this do not need to call this parent method, as it doesn't do anything.
+     *
+     * #pw-group-formatting
+     *
+     * @param Page $page
+     * @param Field $field
+     * @param string|int|object $value
+     * @return mixed
+     *
+     */
+    public function formatValue(Page $page, Field $field, $value) {
+        if($value instanceof PhoneNumber) {
+            $phoneNumber = $value;
+        } elseif((is_string($value) || is_numeric($value)) && strlen($value)) {
+            $phoneNumber = new PhoneNumber($value, $field->regionCode);
+        } else {
+            $phoneNumber = $this->getBlankValue($page, $field);
+        }
+
+        if($phoneNumber->isValidNumber()) {
+            return $phoneNumber->format(PhoneNumberConst::international);
+        }
+        return '';
+    }
+
+    /**
+     * Render a markup string of the value.
+     *
+     * Non-markup components should also be entity encoded where appropriate.
+     *
+     * Most Fieldtypes don't need to implement this since the default covers most scenarios.
+     *
+     * This is different from `Fieldtype::formatValue()` in that it always returns a string (or object that can be
+     * typecast to a string) that is output ready with markup. Further, this method may be used to render
+     * specific properties in compound Fieldtypes. The intention here is primarily for admin output purposes,
+     * but can be used front-end where applicable.
+     *
+     * This is different from `Inputfield::renderValue()` in that the context may be outside that of an Inputfield,
+     * as Inputfields can have external CSS or JS dependencies.
+     *
+     * #pw-group-formatting
+     *
+     * @param Page $page Page that $value comes from
+     * @param Field $field Field that $value comes from
+     * @param mixed $value Optionally specify the value returned by `$page->getFormatted('field')`.
+     *  When specified, value must be a formatted value.
+     *  If null or not specified (recommended), it will be retrieved automatically.
+     * @param string $property Optionally specify the property or index to render. If omitted, entire value is rendered.
+     * @return string|MarkupFieldtype Returns a string or object that can be output as a string, ready for output.
+     *  Return a MarkupFieldtype value when suitable so that the caller has potential specify additional
+     *  config options before typecasting it to a string.
+     *
+     */
+    public function ___markupValue(Page $page, Field $field, $value = null, $property = '') {
+        if($value instanceof PhoneNumber) {
+            $phoneNumber = $value;
+        } elseif((is_string($value) || is_numeric($value)) && strlen($value)) {
+            $phoneNumber = new PhoneNumber($value, $field->regionCode);
+        } else {
+            $phoneNumber = $this->getBlankValue($page, $field);
+        }
+
+        if($phoneNumber->isValidNumber()) {
+            return $phoneNumber->format(PhoneNumberConst::international);
+        }
+        return '';
+    }
+
+
+    /**
+     * Set the config option fields for this Field
+     * These appear in the 'Details' Tab when editing an instance of this Field
+     */
+    public function ___getConfigInputfields(Field $field) {
+        $regionCodeTitles = PhoneNumberConst::getRegionCodeTitles();
+        $regionCodeTitles = array_merge([\libphonenumber\PhoneNumberUtil::UNKNOWN_REGION => ' '], $regionCodeTitles);
+
+        $inputfields = parent::___getConfigInputfields($field);
+
+        $f = $this->wire('modules')->get('InputfieldSelect');
+        $f->name = 'regionCode';
+        $f->label = $this->_('Default region code');
+        $f->required = true;
+        $f->notes = $this->_('ISO 3166-1 alpha-2 code for country. See [Wiki](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)');
+        $f->addOptions($regionCodeTitles);
+        $f->value = $field->regionCode ? $field->regionCode : \libphonenumber\PhoneNumberUtil::UNKNOWN_REGION;
+
+        $inputfields->add($f);
+
+        $f = $this->modules->get("InputfieldCheckbox");
+        $f->name = 'enableExtension';
+        $f->label = $this->_('Enable phone number extension?');
+        $f->notes = $this->_('If disabled, extention will be removed on field save. Note: it w\'ont automatically update phone numbers saved earlier. You\'ll need to re-save them.');
+        $f->value = $field->enableExtension;
+        if($field->enableExtension) $f->attr('checked', 'checked');
+
+        $inputfields->add($f);
+
+        return $inputfields;
+    }
+
+}
+
+
