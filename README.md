@@ -29,6 +29,7 @@ starts happening.
 
 ## Usage: as PhoneNumber class
 
+```````````
 $phone = '8 (916) 318-07-29 ext 1234'; // input string could be in any phone-recogizable format
 $phoneNumber = new PhoneNumber($phone, 'RU'); // or call wire('modules')->get('HelperPhone')->makePhoneNumber($phone, 'RU');
 
@@ -39,33 +40,36 @@ echo $phoneNumber->getCountryCode(); // 7
 echo $phoneNumber->getRegionCode(); // RU
 echo $phoneNumber->getNationalNumber(); // 9163180729
 echo $phoneNumber->getExtension(); // 1234
+```````````
 
 ## Usage: as field
 
-// Note: on field creation, make sure that you've configured field settings:
-// - default region: region that will be assumed if input phone number string is not in international format, e.g. does not start with '+'
-// - enabled/disabled phone extentions: if disabled, phone extension will be removed on field save.
+Note: on field creation, make sure that you've configured field settings
+- default region: region that will be assumed if input phone number string is not in international format, e.g. does not start with '+'
+- enabled/disabled phone extentions: if disabled, phone extension will be removed on field save.
 
-// Phone field settings in example below: default region code 'RU', phone extensions are enabled
+Phone field settings in example below: default region code 'RU', phone extensions are enabled
 
+```````````
 echo $page->phone; // +79163180729, $page->phone stores instance of PhoneNumber which renders toString in E164 format. Note: this format does not include extension.
 echo $page->getFormatted('phone'); // +7 916 318-07-29 ext. 1234
 echo $page->getUnformatted('phone'); // +79163180729
 echo $page->phone->format(PhoneNumberConst::RFC3966); // tel:+7-916-318-07-29;ext=1234
 echo $page->phone->getNationalNumber(); // 9163180729
+```````````
 
 ## Usage: in PW selectors
 
-// FieldtypePhoneNumber is instance of FieldtypeText.
-// It stores phone numbers and extensions as string in E164 format with #extention (if provided by user and enabled in settings)
-// E.g. in db it looks like this: '+79163180729#1234'
-// This makes it easy to query fields as any text field
-// However, be careful
+FieldtypePhoneNumber is instance of FieldtypeText.
+It stores phone numbers and extensions as string in E164 format with #extention (if provided by user and enabled in settings)
+E.g. in db it looks like this: '+79163180729#1234'. This makes it easy to query fields as any text field.
 
+```````````
 echo $pages->find([
     'template' => 'my_temlate',
     'phone^=' => '+79163180729',
 ]); // will echo page ids where phone starts with '+79163180729'
+```````````
 
 ## License
 
