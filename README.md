@@ -7,7 +7,7 @@ Copyright (c) 2013-2016 Andrey Valiev aka @valieand
 This pack includes following modules for ProcessWire CMS/CMF:
 - FieldtypePhoneNumber: module that stores phone numbers
 - InputfieldPhoneNumber: module that renders inputfield for phone numbers
-- HelperPhone: module that can be
+- HelperPhone: module that loads PhoneNumber and PhoneNumberConst classes, and 'libphonenumber' namespace
 
 All these modules require included PW WireData-derived class PhoneNumber and PhoneNumberConst.
 - PhoneNumber class is a thin wrapper over [giggsey/libphonenumber-for-php](https://github.com/giggsey/libphonenumber-for-php), itself is port of Google's libphonenumber.
@@ -23,9 +23,11 @@ Please note that this module requires:
 
 Copy (or clone with git) HelperPhone folder to /site/modules/, go to Admin >
 Modules, hit "Check for new modules" and install required modules.
+Each of these modules can be used independently.
 
-After installing these modules you need to configure them before anything really
-starts happening.
+After installing HelperPhone - set default region code in module config. If skipped, phone numbers will be valid only if number is provided in international format, e.g. starting with '+'.
+
+FieldtypePhoneNumber and InputfieldPhoneNumber does not require configuration in module config, however, if you create new PhoneNumber field, make sure that it is configured in field settings: default region and enable/disable extensions.
 
 ## Usage: as PhoneNumber class
 
@@ -54,7 +56,15 @@ echo $phoneNumber->getNationalNumber();
 
 echo $phoneNumber->getExtension();
 // 1234
+
+echo $phoneNumber->formatForCallingFrom('US')
+// 011 7 916 318-07-28
+
+echo $phoneNumber->formatForCallingFrom('GE')
+// 00 7 916 318-07-28
 ```````````
+
+For more methods and properties please refer to PhoneNumber and PhoneNumberConst source files. Need more? Check [giggsey/libphonenumber-for-php](https://github.com/giggsey/libphonenumber-for-php) and use it by accessing $phoneNumber->phoneNumber property - it is instance of \libphonenumber\PhoneNumber or null (if empty).
 
 ## Usage: as field
 
@@ -96,6 +106,11 @@ echo $pages->find([
 ]);
 // will echo page ids where phone starts with '+79163180729'
 ```````````
+
+## Usage: FieldtypePhoneNumber and InputfieldPhoneNumber
+
+Two new properties you may find useful: $regionCode and $enableExtension. Other properties are derived from '...Text' parents.
+Please refer to source files for details.
 
 ## License
 
