@@ -30,7 +30,7 @@ starts happening.
 ## Usage: as PhoneNumber class
 
 ```````````
-$phone = '8 (916) 318-07-29 ext 1234'; // input string could be in any phone-recogizable format
+$phone = '8 (916) 318-07-29 ext 1234'; // input string could be in any phone-recognizable format
 $phoneNumber = new PhoneNumber($phone, 'RU'); // or call wire('modules')->get('HelperPhone')->makePhoneNumber($phone, 'RU');
 
 echo ($phoneNumber->isValidNumber() ? 'Yes':'No'); // Yes
