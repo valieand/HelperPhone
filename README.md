@@ -29,7 +29,7 @@ After installing HelperPhone - set default region code in module config. If skip
 
 FieldtypePhoneNumber and InputfieldPhoneNumber does not require configuration in module config, however, if you create new PhoneNumber field, make sure that it is configured in field settings: default region and enable/disable extensions.
 
-## Usage: as PhoneNumber class
+## Usage: PhoneNumber class
 
 ```````````
 $phone = '8 (916) 318-07-29 ext 1234'; // input string could be in any phone-recognizable format
@@ -66,11 +66,11 @@ echo $phoneNumber->formatForCallingFrom('GE')
 
 For more methods and properties please refer to PhoneNumber and PhoneNumberConst source files. Need more? Check [giggsey/libphonenumber-for-php](https://github.com/giggsey/libphonenumber-for-php) and use it by accessing $phoneNumber->phoneNumber property - it is instance of \libphonenumber\PhoneNumber or null (if empty).
 
-## Usage: as field
+## Usage: field
 
 Note: on field creation, make sure that you've configured field settings
-- default region: region that will be assumed if input phone number string is not in international format, e.g. does not start with '+'
-- enabled/disabled phone extentions: if disabled, phone extension will be removed on field save.
+- Default region: assumed region if input phone number string is not in international format (starts with '+', etc)
+- Enabled/disabled phone extentions: if disabled, phone extension will be removed on field save.
 
 Phone field settings in example below: default region code 'RU', phone extensions are enabled
 
@@ -93,7 +93,7 @@ echo $page->phone->getNationalNumber();
 // 9163180729
 ```````````
 
-## Usage: in PW selectors
+## Usage: PW selectors
 
 FieldtypePhoneNumber is instance of FieldtypeText.
 It stores phone numbers and extensions as string in E164 format with #extention (if provided by user and enabled in settings)
